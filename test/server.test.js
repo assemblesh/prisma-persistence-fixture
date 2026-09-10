@@ -36,6 +36,10 @@ afterEach(async () => {
 });
 
 test("health is public while records require the run key", async () => {
+  const root = await fetch(`${baseUrl}/`);
+  assert.equal(root.status, 200);
+  assert.deepEqual(await root.json(), { status: "ok" });
+
   const health = await fetch(`${baseUrl}/healthz`);
   assert.equal(health.status, 200);
   assert.deepEqual(await health.json(), { status: "ok" });

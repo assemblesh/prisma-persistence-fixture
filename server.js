@@ -91,7 +91,7 @@ export function createServer({ query, runKey }) {
       return;
     }
 
-    if (request.method === "GET" && pathname === "/healthz") {
+    if (request.method === "GET" && (pathname === "/" || pathname === "/healthz")) {
       sendJson(response, 200, { status: "ok" });
       return;
     }
