@@ -7,9 +7,14 @@ let server;
 let baseUrl;
 let records;
 let calls;
+let healthAvailable;
 
 function fakeQuery(text, values) {
   calls.push({ text, values });
+  if (text === "SELECT 1") {
+    if (!healthAvailable) throw new Error("password=fixture-secret");
+    return { rows: [{ value: 1 }] };
+  }
   if (text.startsWith("INSERT")) {
     const [id, runKey, payload] = values;
     if (records.has(id)) return { rows: [] };
@@ -26,6 +31,7 @@ function fakeQuery(text, values) {
 beforeEach(async () => {
   records = new Map();
   calls = [];
+  healthAvailable = true;
   server = createServer({ query: fakeQuery, runKey: RUN_KEY });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -43,7 +49,9 @@ test("health is public while records require the run key", async () => {
   const health = await fetch(`${baseUrl}/healthz`);
   assert.equal(health.status, 200);
   assert.deepEqual(await health.json(), { status: "ok" });
+  assert.deepEqual(calls.map(({ text }) => text), ["SELECT 1", "SELECT 1"]);
 
+  calls = [];
   const denied = await fetch(`${baseUrl}/records`, {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -51,6 +59,18 @@ test("health is public while records require the run key", async () => {
   });
   assert.equal(denied.status, 401);
   assert.equal(calls.length, 0);
+});
+
+test("health reports unavailable when the database probe fails without exposing the error", async () => {
+  healthAvailable = false;
+
+  for (const path of ["/", "/healthz"]) {
+    const response = await fetch(`${baseUrl}${path}`);
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), { status: "unavailable" });
+  }
+
+  assert.deepEqual(calls.map(({ text }) => text), ["SELECT 1", "SELECT 1"]);
 });
 
 test("a run-key write can be read back from the same backing store", async () => {

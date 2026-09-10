@@ -16,7 +16,9 @@ npm test
 DATABASE_URL='postgres://...' RUN_KEY='per-run-secret' npm start
 ```
 
-`GET /` and `GET /healthz` are public health checks. `POST /records` and
-`GET /records/:id` require the `X-Run-Key` header. A record id is limited to
-128 safe identifier characters;
+`GET /` and `GET /healthz` are public database health checks. They run `SELECT
+1`, return `{ "status": "ok" }` when the database is ready, and return `503`
+with `{ "status": "unavailable" }` without exposing database errors otherwise.
+`POST /records` and `GET /records/:id` require the `X-Run-Key` header. A record
+id is limited to 128 safe identifier characters;
 the value is limited to 512 UTF-8 bytes. SQL uses parameters throughout.

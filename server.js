@@ -92,6 +92,12 @@ export function createServer({ query, runKey }) {
     }
 
     if (request.method === "GET" && (pathname === "/" || pathname === "/healthz")) {
+      try {
+        await query("SELECT 1");
+      } catch {
+        sendJson(response, 503, { status: "unavailable" });
+        return;
+      }
       sendJson(response, 200, { status: "ok" });
       return;
     }
